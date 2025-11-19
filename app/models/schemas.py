@@ -1,11 +1,12 @@
-from typing import List, Optional
 from pydantic import BaseModel
+
 
 class ExecutionRequest(BaseModel):
     code: str
     lang: str = "python"
     keep_template: bool = False
-    libraries: Optional[List[str]] = []
+    libraries: list[str] | None = []
+
 
 class ExecutionResult(BaseModel):
     stdout: str
