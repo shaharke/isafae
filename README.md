@@ -1,6 +1,21 @@
 # LLM Sandbox Web Server
 
-A Python web server built with FastAPI that provides REST APIs for managing sandboxed code execution sessions using [llm-sandbox](https://vndee.github.io/llm-sandbox/).
+A dual-server architecture built with NestJS (Node.js) and FastAPI (Python) that provides REST APIs for managing sandboxed code execution sessions using [llm-sandbox](https://vndee.github.io/llm-sandbox/).
+
+## Architecture
+
+This project uses a dual-server architecture:
+
+- **Application Server** (NestJS/Fastify): Main entry point, handles client requests and business logic
+- **Proxy Server** (Python/FastAPI): Manages LLM sandbox operations and Docker containers
+
+```
+┌─────────────┐         ┌─────────────────┐         ┌──────────────┐         ┌───────────────┐
+│   Client    │────────▶│  App Server     │────────▶│ Proxy Server │────────▶│ LLM Sandbox   │
+│             │         │ (NestJS/Fastify)│         │ (FastAPI)    │         │ (Docker)      │
+│             │◀────────│  Port: 3000     │◀────────│ Port: 8000   │◀────────│               │
+└─────────────┘         └─────────────────┘         └──────────────┘         └───────────────┘
+```
 
 ## Features
 
@@ -9,10 +24,12 @@ A Python web server built with FastAPI that provides REST APIs for managing sand
 - **Library Installation**: Dynamically install packages within sandbox sessions
 - **Secure Isolation**: Uses Docker containers for secure code execution
 - **REST API**: Clean, well-documented API endpoints
+- **Dual-Server Architecture**: Separation of concerns between proxy and application logic
 
 ## Prerequisites
 
 - Python 3.10+
+- Node.js 20+
 - Docker (or Colima as a Docker alternative)
 
 ### Setting up Colima (macOS)
@@ -38,39 +55,54 @@ git clone <repository-url>
 cd isafae
 ```
 
-2. Create a virtual environment:
+2. **Install Proxy Server Dependencies (Python)**:
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+cd proxy
+python3 -m venv ../.venv
+source ../.venv/bin/activate  # On Windows: ..\.venv\Scripts\activate
+uv sync
+cd ..
 ```
 
-3. Install dependencies:
+3. **Install App Server Dependencies (Node.js)**:
 ```bash
-pip install -r requirements.txt
+cd app-server
+npm install
+cd ..
 ```
 
-## Running the Server
+## Running the Servers
 
-### Option 1: Using the startup script (recommended for Colima)
+### Option 1: Start Both Servers (Recommended)
 ```bash
-./start_server.sh
+./start_all.sh
 ```
 
-### Option 2: Manual start
-```bash
-# If using Colima, set the Docker host
-export DOCKER_HOST=unix://$HOME/.colima/default/docker.sock
+This will start both the proxy server (port 8000) and the application server (port 3000).
 
-# Start the server
-uvicorn app.main:app --reload
+### Option 2: Start Servers Individually
+
+**Proxy Server:**
+```bash
+cd proxy
+./start_proxy.sh
+```
+
+**Application Server:**
+```bash
+cd app-server
+./start_app_server.sh
 ```
 
 The API will be available at:
-- **Base URL**: `http://localhost:8000`
-- **API Documentation**: `http://localhost:8000/docs`
-- **Alternative Docs**: `http://localhost:8000/redoc`
+- **App Server** (Main Entry Point): `http://localhost:3000`
+- **Proxy Server** (Internal): `http://localhost:8000`
+- **API Documentation**: `http://localhost:3000/docs` (when implemented)
 
 ## API Endpoints
+
+> [!NOTE]
+> The current implementation has endpoints on both servers. In production, clients should connect to the App Server (port 3000), which will communicate with the Proxy Server (port 8000) internally.
 
 ### Health Check
 ```bash
@@ -142,6 +174,27 @@ DELETE /sessions/{session_id}
 
 ## Example Usage
 
+> [!NOTE]
+> The examples below use the App Server API (port 3000). The App Server is the main entry point for clients.
+
+### Using the App Server (Recommended)
+
+```bash
+
+# Execute code (placeholder implementation)
+curl -X POST http://localhost:3000/sandbox/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Hello from App Server!\")",
+    "lang": "python",
+    "libraries": ["numpy"]
+  }'
+```
+
+### Using the Proxy Server Directly (For Testing)
+
+For direct access to the proxy server's sandbox functionality:
+
 ```bash
 # 1. Create a session
 SESSION_ID=$(curl -s -X POST http://localhost:8000/sessions \
@@ -152,7 +205,7 @@ SESSION_ID=$(curl -s -X POST http://localhost:8000/sessions \
 curl -X POST http://localhost:8000/sessions/$SESSION_ID/execute \
   -H "Content-Type: application/json" \
   -d '{
-    "code": "import numpy as np\nprint(np.array([1,2,3]).mean())",
+    "code": "import numpy as np\\nprint(np.array([1,2,3]).mean())",
     "libraries": ["numpy"]
   }'
 
@@ -162,43 +215,76 @@ curl -X DELETE http://localhost:8000/sessions/$SESSION_ID
 
 ## Testing
 
-Run the test suite:
+### Proxy Server Tests
 ```bash
-PYTHONPATH=. pytest tests/
+cd proxy
+pytest tests/ -v
+```
+
+### App Server Tests
+```bash
+cd app-server
+npm test
 ```
 
 ## Project Structure
 
 ```
 .
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application entry point
-│   ├── api/
+├── proxy/                    # Python FastAPI proxy server
+│   ├── app/
 │   │   ├── __init__.py
-│   │   └── routes.py        # API route handlers
-│   ├── core/
-│   │   └── __init__.py
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py       # Pydantic models
-│   └── services/
-│       ├── __init__.py
-│       └── sandbox.py       # Sandbox management logic
-├── tests/
-│   └── test_api.py          # API tests
-├── requirements.txt
-└── README.md
+│   │   ├── main.py          # FastAPI application entry point
+│   │   ├── api/
+│   │   │   └── routes.py    # API route handlers
+│   │   ├── core/
+│   │   ├── models/
+│   │   │   └── schemas.py   # Pydantic models
+│   │   └── services/
+│   │       └── sandbox.py   # Sandbox management logic
+│   ├── tests/
+│   ├── pyproject.toml
+│   ├── requirements.txt
+│   └── start_proxy.sh
+├── app-server/              # NestJS/Fastify application server
+│   ├── src/
+│   │   ├── main.ts
+│   │   ├── app.module.ts
+│   │   ├── app.controller.ts
+│   │   ├── sandbox/
+│   │   │   ├── sandbox.module.ts
+│   │   │   ├── sandbox.controller.ts
+│   │   │   ├── sandbox.service.ts
+│   │   │   └── dto/
+│   │   └── common/
+│   ├── test/
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── start_app_server.sh
+├── .github/
+│   └── workflows/
+│       └── ci.yml           # CI/CD pipeline
+├── README.md
+├── CONTRIBUTING.md
+├── LICENSE
+└── start_all.sh            # Start both servers
 ```
 
-## Architecture
+## Development
 
-The server uses a simple architecture:
+### Proxy Server (Python)
 
-1. **FastAPI** handles HTTP requests and routing
-2. **SandboxManager** manages the lifecycle of sandbox sessions
-3. **llm-sandbox** provides the underlying container-based isolation
-4. Sessions are stored in-memory (for MVP)
+- **Linting**: `cd proxy && ruff check .`
+- **Formatting**: `cd proxy && ruff format .`
+- **Type Checking**: `cd proxy && mypy app/`
+- **Tests**: `cd proxy && pytest tests/`
+
+### App Server (Node.js)
+
+- **Linting**: `cd app-server && npm run lint`
+- **Development Mode**: `cd app-server && npm run start:dev`
+- **Tests**: `cd app-server && npm test`
+- **Build**: `cd app-server && npm run build`
 
 ## Security Considerations
 

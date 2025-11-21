@@ -44,3 +44,16 @@ build/
 dist/
 *.egg-info/
 *.egg
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# NestJS
+.nest/

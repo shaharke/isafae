@@ -7,8 +7,8 @@ on:
     branches: [main, develop]
 
 jobs:
-  lint-and-type-check:
-    name: Lint and Type Check
+  lint-and-type-check-proxy:
+    name: Lint and Type Check (Proxy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,19 +24,23 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
+        working-directory: ./proxy
         run: uv sync
 
       - name: Run Ruff linter
+        working-directory: ./proxy
         run: uv run ruff check .
 
       - name: Run Ruff formatter check
+        working-directory: ./proxy
         run: uv run ruff format --check .
 
       - name: Run mypy
+        working-directory: ./proxy
         run: uv run mypy app/
 
-  test:
-    name: Test
+  test-proxy:
+    name: Test (Proxy)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -56,20 +60,22 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
+        working-directory: ./proxy
         run: uv sync
 
       - name: Run unit tests
+        working-directory: ./proxy
         run: uv run pytest -m unit --cov=app --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
+          file: ./proxy/coverage.xml
+          flags: proxy-unittests
+          name: proxy-coverage
 
-  test-e2e:
-    name: E2E Tests
+  test-e2e-proxy:
+    name: E2E Tests (Proxy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,14 +91,45 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
+        working-directory: ./proxy
         run: uv sync
 
       - name: Run E2E tests
+        working-directory: ./proxy
         run: uv run pytest -m e2e --cov=app --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.xml
-          flags: e2e
-          name: codecov-umbrella
+          file: ./proxy/coverage.xml
+          flags: proxy-e2e
+          name: proxy-e2e-coverage
+
+  lint-and-test-app-server:
+    name: Lint and Test (App Server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ./app-server/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./app-server
+        run: npm ci
+
+      - name: Run linting
+        working-directory: ./app-server
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: ./app-server
+        run: npm test
+
+      - name: Build
+        working-directory: ./app-server
+        run: npm run build

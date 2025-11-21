@@ -16,8 +16,12 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-requests
-        args: [--config-file=pyproject.toml]
-        exclude: ^tests/
+          - pytest
+          - fastapi
+          - httpx
+        args: [--config-file=proxy/pyproject.toml]
+        files: ^proxy/
+        exclude: ^proxy/tests/
 
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
