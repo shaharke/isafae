@@ -3,7 +3,7 @@ Unit tests for API routes.
 These tests use mocks and do not require Docker.
 """
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +12,75 @@ from app.main import app
 from app.models.schemas import ExecutionResult
 
 client = TestClient(app)
+
+
+@pytest.mark.unit
+@patch("app.api.routes.session_manager")
+def test_create_session(mock_manager):
+    """Test /sessions creation endpoint."""
+    mock_manager.create_session.return_value = "test-session-id"
+
+    response = client.post("/sessions", json={"lang": "python"})
+
+    assert response.status_code == 200
+    assert response.json() == {"session_id": "test-session-id"}
+    mock_manager.create_session.assert_called_once_with(lang="python", keep_template=False)
+
+
+@pytest.mark.unit
+@patch("app.api.routes.session_manager")
+def test_execute_in_session(mock_manager):
+    """Test /sessions/{id}/execute endpoint."""
+    # Mock session and execution result
+    mock_session = Mock()
+    mock_result = Mock(stdout="output", stderr="", exit_code=0)
+    mock_session.run.return_value = mock_result
+    mock_manager.get_session.return_value = mock_session
+
+    response = client.post("/sessions/test-id/execute", json={"code": "print('hi')"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["stdout"] == "output"
+    assert data["exit_code"] == 0
+
+    mock_manager.get_session.assert_called_once_with("test-id")
+    mock_session.run.assert_called_once_with("print('hi')", libraries=[])
+
+
+@pytest.mark.unit
+@patch("app.api.routes.session_manager")
+def test_execute_in_session_not_found(mock_manager):
+    """Test /sessions/{id}/execute with invalid session."""
+    mock_manager.get_session.return_value = None
+
+    response = client.post("/sessions/invalid-id/execute", json={"code": "print('hi')"})
+
+    assert response.status_code == 404
+
+
+@pytest.mark.unit
+@patch("app.api.routes.session_manager")
+def test_close_session(mock_manager):
+    """Test /sessions/{id} delete endpoint."""
+    mock_manager.close_session.return_value = True
+
+    response = client.delete("/sessions/test-id")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "closed"}
+    mock_manager.close_session.assert_called_once_with("test-id")
+
+
+@pytest.mark.unit
+@patch("app.api.routes.session_manager")
+def test_close_session_not_found(mock_manager):
+    """Test closing invalid session."""
+    mock_manager.close_session.return_value = False
+
+    response = client.delete("/sessions/invalid-id")
+
+    assert response.status_code == 404
 
 
 @pytest.mark.unit
