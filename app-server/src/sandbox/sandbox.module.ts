@@ -3,8 +3,8 @@ import { SandboxController } from './sandbox.controller';
 import { SandboxService } from './sandbox.service';
 
 @Module({
-    controllers: [SandboxController],
-    providers: [SandboxService],
-    exports: [SandboxService],
+  controllers: [SandboxController],
+  providers: [SandboxService],
+  exports: [SandboxService],
 })
-export class SandboxModule { }
+export class SandboxModule {}
