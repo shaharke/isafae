@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Session entity - tracks explicitly created sandbox sessions
+model Session {
+  id            String      @id @default(uuid())
+  userId        String?     @map("user_id") // Nullable for future user management
+  status        SessionStatus @default(ACTIVE)
+  lang          String      @default("python")
+  keepTemplate  Boolean     @default(false) @map("keep_template")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  terminatedAt  DateTime?   @map("terminated_at")
+  metadata      Json?       // Extensible field for session-specific data
+
+  // Relationships
+  executions    Execution[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("sessions")
+}
+
+enum SessionStatus {
+  ACTIVE
+  TERMINATED
+  FAILED
+}
+
+// Prompt entity - stores text prompts with input/output specifications
+model Prompt {
+  id            String    @id @default(uuid())
+  userId        String?   @map("user_id") // Nullable for future user management
+  title         String
+  description   String    @db.Text
+  inputSchema   Json?     @map("input_schema") // TypeBox/JSON Schema for expected inputs
+  outputSchema  Json?     @map("output_schema") // TypeBox/JSON Schema for expected outputs
+  tags          String[]  @default([])
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relationships
+  functions     Function[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([tags])
+  @@map("prompts")
+}
+
+// Function entity - stores LLM-generated code from prompts
+model Function {
+  id          String          @id @default(uuid())
+  promptId    String          @map("prompt_id")
+  userId      String?         @map("user_id") // Nullable for future user management
+  name        String
+  code        String          @db.Text
+  lang        String          @default("python")
+  version     Int             @default(1)
+  llmModel    String          @map("llm_model") // e.g., "gpt-4", "claude-3"
+  libraries   String[]        @default([])
+  status      FunctionStatus  @default(DRAFT)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  metadata    Json?           // Extensible - type hints, docstrings, etc.
+
+  // Relationships
+  prompt      Prompt          @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  executions  Execution[]
+
+  @@index([promptId, version(sort: Desc)])
+  @@index([userId])
+  @@index([name, lang])
+  @@map("functions")
+}
+
+enum FunctionStatus {
+  DRAFT
+  PUBLISHED
+  DEPRECATED
+}
+
+// Execution entity - records each code execution
+model Execution {
+  id                String    @id @default(uuid())
+  functionId        String?   @map("function_id") // Nullable for ad-hoc code execution
+  sessionId         String?   @map("session_id") // Nullable for ephemeral executions
+  userId            String?   @map("user_id") // Nullable for future user management
+  code              String    @db.Text // Snapshot of code at execution time
+  inputParams       Json?     @map("input_params") // Input parameters passed
+  stdout            String    @db.Text @default("")
+  stderr            String    @db.Text @default("")
+  exitCode          Int       @map("exit_code")
+  executionTimeMs   Int       @map("execution_time_ms") // Execution duration in milliseconds
+  libraries         String[]  @default([])
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // Relationships
+  function          Function? @relation(fields: [functionId], references: [id], onDelete: SetNull)
+  session           Session?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([functionId, createdAt(sort: Desc)])
+  @@index([sessionId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([exitCode, createdAt(sort: Desc)]) // For finding failed executions
+  @@map("executions")
+}
