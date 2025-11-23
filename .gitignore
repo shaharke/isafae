@@ -57,3 +57,6 @@ yarn-error.log*
 
 # NestJS
 .nest/
+
+# Environment variables
+.env

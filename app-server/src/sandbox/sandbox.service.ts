@@ -1,16 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ExecuteCodeDto } from './dto/execute-code.dto';
+import { ProxyClientService } from '../proxy-client/proxy-client.service';
+import { ExecutionResult } from '../proxy-client/dto/execution-result.dto';
 
 @Injectable()
 export class SandboxService {
-  async executeCode(executeCodeDto: ExecuteCodeDto) {
-    // Placeholder implementation
-    // TODO: Integrate with llm-sandbox or call Python service
-    await Promise.resolve({
-      stdout: `Executed code: ${executeCodeDto.code.substring(0, 50)}...`,
-      stderr: '',
-      exit_code: 0,
-      message: 'This is a placeholder implementation',
-    });
+  constructor(private readonly proxyClient: ProxyClientService) { }
+
+  async executeCode(executeCodeDto: ExecuteCodeDto): Promise<ExecutionResult> {
+    return this.proxyClient.executeCode(executeCodeDto);
   }
 }
