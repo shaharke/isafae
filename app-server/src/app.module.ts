@@ -8,8 +8,17 @@ import { ExecutionsModule } from './executions/executions.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { FunctionsModule } from './functions/functions.module';
 
+const baseImports = [
+  SandboxModule,
+  PrismaModule,
+  SessionsModule,
+  ExecutionsModule,
+  PromptsModule,
+  FunctionsModule,
+];
+
 @Module({
-  imports: [SandboxModule, PrismaModule, SessionsModule, ExecutionsModule, PromptsModule, FunctionsModule],
+  imports: baseImports,
   controllers: [AppController],
   providers: [AppService],
 })

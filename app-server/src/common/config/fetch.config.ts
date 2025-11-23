@@ -4,7 +4,7 @@ export class FetchConfig {
 
     static initialize() {
         this.baseURL = process.env.PROXY_SERVER_URL || 'http://localhost:8000';
-        this.timeout = parseInt(process.env.PROXY_SERVER_TIMEOUT || '30000', 10);
+        this.timeout = parseInt(process.env.PROXY_SERVER_TIMEOUT || '60000', 10);
     }
 
     static async request<T>(
@@ -20,8 +20,6 @@ export class FetchConfig {
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
         try {
-            console.log(`[ProxyClient] ${options.method || 'GET'} ${endpoint}`);
-
             const response = await fetch(url, {
                 ...options,
                 headers: {
@@ -33,14 +31,8 @@ export class FetchConfig {
 
             clearTimeout(timeoutId);
 
-            console.log(`[ProxyClient] Response ${response.status} from ${endpoint}`);
-
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error(
-                    `[ProxyClient] Response error ${response.status}:`,
-                    errorData,
-                );
                 throw {
                     response: {
                         status: response.status,
@@ -55,7 +47,6 @@ export class FetchConfig {
             clearTimeout(timeoutId);
 
             if (error.name === 'AbortError') {
-                console.error('[ProxyClient] Request timeout');
                 throw {
                     code: 'ETIMEDOUT',
                     message: 'Request timeout',
@@ -68,7 +59,6 @@ export class FetchConfig {
             }
 
             // Network error
-            console.error('[ProxyClient] Network error:', error.message);
             throw {
                 message: error.message,
                 code: error.code || 'NETWORK_ERROR',
