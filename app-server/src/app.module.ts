@@ -7,6 +7,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { ExecutionsModule } from './executions/executions.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { FunctionsModule } from './functions/functions.module';
+import { AdminModule } from './admin/admin.module';
 
 const baseImports = [
   SandboxModule,
@@ -15,6 +16,7 @@ const baseImports = [
   ExecutionsModule,
   PromptsModule,
   FunctionsModule,
+  AdminModule,
 ];
 
 @Module({

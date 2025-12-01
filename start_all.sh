@@ -1,16 +1,19 @@
 #!/bin/bash
-# Start both the Proxy Server and Application Server
+# Start Proxy Server, Application Server, and Admin UI
 
 echo "========================================="
-echo "Starting Dual-Server Architecture"
+echo "Starting All Services"
 echo "========================================="
 echo ""
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Function to cleanup background processes on exit
 cleanup() {
     echo ""
-    echo "Shutting down servers..."
-    kill $PROXY_PID $APP_PID 2>/dev/null
+    echo "Shutting down all services..."
+    kill $PROXY_PID $APP_PID $ADMIN_PID 2>/dev/null
     exit
 }
 
@@ -18,9 +21,8 @@ trap cleanup SIGINT SIGTERM
 
 # Start the application server in the background
 echo "Starting Application Server..."
-cd app-server && ./start_app_server.sh &
+(cd "$SCRIPT_DIR/app-server" && ./start_app_server.sh) &
 APP_PID=$!
-cd ..
 
 # Give the app server a moment to start
 sleep 2
@@ -28,18 +30,27 @@ sleep 2
 # Start the proxy server in the background
 echo ""
 echo "Starting Proxy Server..."
-cd proxy && ./start_proxy.sh &
+(cd "$SCRIPT_DIR/proxy" && ./start_proxy.sh) &
 PROXY_PID=$!
-cd ..
+
+# Give the proxy server a moment to start
+sleep 1
+
+# Start the admin UI in the background
+echo ""
+echo "Starting Admin UI..."
+(cd "$SCRIPT_DIR/admin-ui" && npm run dev) &
+ADMIN_PID=$!
 
 echo ""
 echo "========================================="
-echo "Both servers are running!"
-echo "App Server (Main Entry): http://localhost:3000"
+echo "All services are running!"
+echo "App Server (Main API): http://localhost:3000"
 echo "Proxy Server (Internal): http://localhost:8000"
+echo "Admin UI (Dashboard): http://localhost:5173"
 echo "========================================="
 echo ""
-echo "Press Ctrl+C to stop both servers"
+echo "Press Ctrl+C to stop all services"
 
-# Wait for both processes
-wait $PROXY_PID $APP_PID
+# Wait for all processes
+wait $PROXY_PID $APP_PID $ADMIN_PID

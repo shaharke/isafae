@@ -11,8 +11,11 @@ async function bootstrap() {
     new FastifyAdapter(),
   );
 
-  // Enable CORS
-  app.enableCors();
+  // Enable CORS for React Admin
+  app.enableCors({
+    origin: true, // Allow all origins in development
+    credentials: true,
+  });
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');

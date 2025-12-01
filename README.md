@@ -73,12 +73,15 @@ cd ..
 
 ## Running the Servers
 
-### Option 1: Start Both Servers (Recommended)
+### Option 1: Start All Services (Recommended)
 ```bash
 ./start_all.sh
 ```
 
-This will start both the proxy server (port 8000) and the application server (port 3000).
+This will start all three services:
+- **Proxy server** (port 8000)
+- **Application server** (port 3000)
+- **Admin UI** (port 5173)
 
 ### Option 2: Start Servers Individually
 
@@ -97,7 +100,40 @@ cd app-server
 The API will be available at:
 - **App Server** (Main Entry Point): `http://localhost:3000`
 - **Proxy Server** (Internal): `http://localhost:8000`
+- **Admin UI**: `http://localhost:5173` (when running separately, see below)
 - **API Documentation**: `http://localhost:3000/docs` (when implemented)
+
+## Admin UI
+
+The project includes a React Admin-based web interface for managing sessions, prompts, functions, and executions.
+
+### Running the Admin UI
+
+The admin UI runs as a separate Vite development server:
+
+```bash
+cd admin-ui
+npm install  # First time only
+npm run dev
+```
+
+The admin UI will be available at `http://localhost:5173`
+
+### Features
+
+- **Sessions Management**: View and manage sandbox sessions
+- **Prompts Management**: Create and edit prompts for function generation
+- **Functions Management**: View and manage generated functions
+- **Executions History**: Browse code execution history and logs
+
+### Architecture
+
+The admin UI is a standalone React application that communicates with the App Server's admin API endpoints (`/api/admin/*`). It's built with:
+
+- **React Admin**: Admin panel framework
+- **Material-UI**: Component library
+- **Vite**: Fast development server and build tool
+
 
 ## API Endpoints
 
@@ -251,6 +287,10 @@ npm test
 │   │   ├── main.ts
 │   │   ├── app.module.ts
 │   │   ├── app.controller.ts
+│   │   ├── admin/          # Admin REST API module
+│   │   │   ├── admin.module.ts
+│   │   │   ├── admin.controller.ts
+│   │   │   └── admin.service.ts
 │   │   ├── sandbox/
 │   │   │   ├── sandbox.module.ts
 │   │   │   ├── sandbox.controller.ts
@@ -261,6 +301,13 @@ npm test
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── start_app_server.sh
+├── admin-ui/                # React Admin UI (standalone)
+│   ├── src/
+│   │   ├── App.tsx         # React Admin application
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tsconfig.json
 ├── .github/
 │   └── workflows/
 │       └── ci.yml           # CI/CD pipeline
